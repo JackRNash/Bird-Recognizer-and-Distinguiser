@@ -14,6 +14,7 @@ def chunk_reader(fobj, chunk_size=1024):
 
 def check_for_duplicates(paths, hash=hashlib.sha1):
     hashes = {}
+    count = 0
     for path in paths:
         print(path)
         for dirpath, dirnames, filenames in os.walk(path):
@@ -25,9 +26,12 @@ def check_for_duplicates(paths, hash=hashlib.sha1):
                 file_id = (hashobj.digest(), os.path.getsize(full_path))
                 duplicate = hashes.get(file_id, None)
                 if duplicate:
+                    # pass
                     os.remove(full_path)
                 else:
+                    count += 1
                     hashes[file_id] = full_path
+    print('There were {} unique files'.format(count))
 
 
 if sys.argv[1:]:
