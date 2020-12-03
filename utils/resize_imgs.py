@@ -14,13 +14,13 @@ def resize_img():
       file_ = path + bird + slash + item
       if os.path.isfile(file_):
         filename, extension = os.path.splitext(file_)
-        if extension == '.jpg' or extension == 'jpeg':
-          print(filename)
-          image = Image.open(file_)
-          resized = image.resize((256, 256), Image.ANTIALIAS)
-          resized.save(filename+'.' + extension, 'JPEG', quality=90)
-        # elif extension == '':
-        #   print('REMOVED', filename)
-        #   os.remove(filename)
+        # if extension == '.jpg' or extension == '.jpeg':
+        #   print(filename)
+        #   image = Image.open(file_)
+        #   resized = image.resize((256, 256), Image.ANTIALIAS)
+        #   resized.save(filename + extension, 'JPEG', quality=90)
+        if extension == '' or filename[-1] == '.':
+          print('REMOVED', filename)
+          os.remove(filename+extension)
 
 resize_img()
