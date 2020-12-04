@@ -3,7 +3,7 @@ from os import listdir
 import os
 from os.path import isfile, join
 
-current = "osprey"
+current = "woodpecker"
 mypath = "/Users/connoranderson/Desktop/Bird-Recognizer-and-Distinguisher/dataset/"+current
 f = []
 f = [files for files in listdir(mypath) if isfile(join(mypath, files))]
