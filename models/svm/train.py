@@ -15,7 +15,7 @@ def extract_center(img):
     TO DO
     """
     center = []
-    for i in range(64,192):
+    for i in range(64, 192):
         center.append(img[i][64:192])
     return center
 
@@ -152,12 +152,12 @@ def calculate_error(preds, acc):
 
 if __name__ == "__main__":
 
-    nums = ["1", "10", "100", "250", "500", "1000", "1500", "2000", "2500",
-            "3000", "3500", "4000", "4500", "5000", "5500", "6000",
-            "6500", "7000", "7500", "8000", "8500", "9000", "9500", "10000"]
-    train_errors = []
-    val_errors = []
-    #for n in nums:
+    # nums = ["1", "10", "100", "250", "500", "1000", "1500", "2000", "2500",
+    #         "3000", "3500", "4000", "4500", "5000", "5500", "6000",
+    #         "6500", "7000", "7500", "8000", "8500", "9000", "9500", "10000"]
+    # train_errors = []
+    # val_errors = []
+    # for n in nums:
 
     # Process training data and generate model
     X_tr_raw, X_tr_raw_c, y_tr = label_and_rgb_images("train")
@@ -173,6 +173,6 @@ if __name__ == "__main__":
     print(calculate_error(preds, y_valid))
     preds = svm_model.predict(X_tr)
     print(calculate_error(preds, y_tr))
-    #print(nums)
-    #print(train_errors)
-    #print(val_errors)
+    # print(nums)
+    # print(train_errors)
+    # print(val_errors)
