@@ -17,11 +17,12 @@ np.random.seed(4701)
 # Variables all proccesses need access to
 # train_dir = '../../dataset/train/'
 # validation_dir = '../../dataset/validation/'
+load_mode = True
 data_dir = '../../dataset/'
 model_name = 'resnet'
 num_classes = 10
 batch_size = 8
-num_epochs = 1
+num_epochs = 5
 input_size = 224 # 224 x 224 images expected for resnet
 
 def train_model(model, dataloaders, criterion, optimizer, num_epochs=15):
@@ -58,9 +59,6 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=15):
                 # track history if only in train
                 with torch.set_grad_enabled(phase == 'train'):
                     # Get model outputs and calculate loss
-                    # Special case for inception because in training it has an auxiliary output. In train
-                    #   mode we calculate the loss by summing the final output and the auxiliary output
-                    #   but in testing we only consider the final output.
                     outputs = model(inputs)
                     loss = criterion(outputs, labels)
 
@@ -97,6 +95,31 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=15):
     model.load_state_dict(best_model_wts)
     return model, val_acc_history
 
+def histogram(counts, n = 10):
+    # takes in a list containing values in the range 0,...,n and returns
+    # a list hist where hist[i] is the number of times i appeared in counts
+    hist = [0]*n
+    for d in counts:
+        hist[d] += 1
+    return hist
+
+def eval(model, dataloader):
+    running_corrects = 0
+    incorrects, corrects = [], []
+    for data, labels in tqdm(dataloader):
+        data = data.to(device)
+        labels = labels.to(device)
+
+        with torch.set_grad_enabled(False):
+            outputs = model(data)
+            _, preds = torch.max(outputs, 1)
+
+            running_corrects += torch.sum(preds == labels.data)
+            incorrects += [x.item() for x in preds[preds != labels.data]]
+            corrects += [x.item() for x in preds[preds == labels.data]]
+    # print(incorrects)
+    return running_corrects.double() / len(dataloader.dataset), corrects, incorrects
+
 def freeze(model):
     for param in model.parameters():
         param.requires_grad = False
@@ -114,7 +137,7 @@ def calc_mean_std(dataloader):
     # from https://forums.fast.ai/t/image-normalization-in-pytorch/7534/7
     pop_mean = []
     pop_std = []
-    for i, data in enumerate(dataloader, 0):
+    for data in dataloader:
         # shape (batch_size, 3, height, width)
         img, label = data
         numpy_image = img.numpy()
@@ -152,7 +175,7 @@ if __name__ == '__main__':
             transforms.Resize(input_size),
             transforms.CenterCrop(input_size),
             transforms.ToTensor(),
-            transforms.Normalize([0.4773241, 0.5002451, 0.4575769], [0.22043052, 0.21716149, 0.2665576])
+            transforms.Normalize([0.48150042, 0.49749625, 0.4631295], [0.22679698, 0.22562513, 0.26397094])
             # hard coded mean and std respectively calculated using calc_mean_std
         ]),
     }
@@ -164,6 +187,7 @@ if __name__ == '__main__':
     # Create training and validation dataloaders
     dataloaders_dict = {x: torch.utils.data.DataLoader(image_datasets[x], batch_size=batch_size, shuffle=True, num_workers=4) for x in ['train', 'val']}
 
+    classes = image_datasets['train'].classes
     # Detect if we have a GPU available
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -176,7 +200,6 @@ if __name__ == '__main__':
     #  that we have just initialized, i.e. the parameters with requires_grad
     #  is True.
     params_to_update = model_ft.parameters()
-    print("Params to learn:")
     params_to_update = []
     for name,param in model_ft.named_parameters():
         if param.requires_grad == True:
@@ -189,30 +212,31 @@ if __name__ == '__main__':
     criterion = nn.CrossEntropyLoss()
 
     # Train and evaluate
-    model_ft, hist = train_model(model_ft, dataloaders_dict, criterion, optimizer_ft, num_epochs=num_epochs)
+    if not load_mode:
+        model_ft, hist = train_model(model_ft, dataloaders_dict, criterion, optimizer_ft, num_epochs=num_epochs)
+        torch.save(model_ft, 'model')
+        torch.save(hist, 'histogram')
+    else:
+        model_ft = torch.load('model')
+        model_ft.to(device)
+        hist = torch.load('histogram')
+    
+    val_acc, corrects, incorrects = eval(model_ft, dataloaders_dict['val'])
+    print('Validation accuracy {:.2f}%'.format(val_acc*100))
+    hist_corrects = histogram(corrects)
+    hist_incorrects = histogram(incorrects)
+    total_correct = sum(hist_corrects)
+    total_incorrect = sum(hist_incorrects)
+    print([(i, x) for i, x in enumerate(classes)])
+    print([int(100*x/(total_correct+total_incorrect)) for x in hist_corrects])
+    print([int(100*x/(total_correct+total_incorrect)) for x in hist_incorrects])
 
-    # Initialize the non-pretrained version of the model used for this run
-    # scratch_model,_ = initialize_model(num_classes)
-    # scratch_model = scratch_model.to(device)
-    # scratch_optimizer = optim.SGD(scratch_model.parameters(), lr=0.001, momentum=0.9)
-    # scratch_criterion = nn.CrossEntropyLoss()
-    # _,scratch_hist = train_model(scratch_model, dataloaders_dict, scratch_criterion, scratch_optimizer, num_epochs=num_epochs)
-
-    # # Plot the training curves of validation accuracy vs. number
-    # #  of training epochs for the transfer learning method and
-    # #  the model trained from scratch
-    # ohist = []
-    # shist = []
-
-    # ohist = [h.cpu().numpy() for h in hist]
-    # shist = [h.cpu().numpy() for h in scratch_hist]
-
-    # plt.title("Validation Accuracy vs. Number of Training Epochs")
-    # plt.xlabel("Training Epochs")
-    # plt.ylabel("Validation Accuracy")
-    # plt.plot(range(1,num_epochs+1),ohist,label="Pretrained")
-    # plt.plot(range(1,num_epochs+1),shist,label="Scratch")
-    # plt.ylim((0,1.))
-    # plt.xticks(np.arange(1, num_epochs+1, 1.0))
-    # plt.legend()
-    # plt.show()
+    train_acc, corrects, incorrects = eval(model_ft, dataloaders_dict['train'])
+    print('Train accuracy {:.2f}%'.format(train_acc*100))
+    hist_corrects = histogram(corrects)
+    hist_incorrects = histogram(incorrects)
+    total_correct = sum(hist_corrects)
+    total_incorrect = sum(hist_incorrects)
+    print([int(100*x/(total_correct+total_incorrect)) for x in hist_corrects])
+    print([int(100*x/(total_correct+total_incorrect)) for x in hist_incorrects])
+    
