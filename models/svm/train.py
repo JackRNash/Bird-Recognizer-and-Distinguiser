@@ -12,7 +12,12 @@ image_path = "../../dataset/"
 
 def extract_center(img):
     """
-    TO DO
+    Returns the raw BGR pixels for the center 128x128 of an image.
+
+    Extracts inner pixels of an image.
+
+    Parameter img: the entire raw BGR pixels of an image
+    Precondition: it is a 256x256 image
     """
     center = []
     for i in range(64, 192):
