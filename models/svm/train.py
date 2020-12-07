@@ -12,10 +12,15 @@ image_path = "../../dataset/"
 
 def extract_center(img):
     """
-    TO DO
+    Returns the raw BGR pixels for the center 128x128 of an image.
+
+    Extracts inner pixels of an image.
+
+    Parameter img: the entire raw BGR pixels of an image
+    Precondition: it is a 256x256 image
     """
     center = []
-    for i in range(64,192):
+    for i in range(64, 192):
         center.append(img[i][64:192])
     return center
 
@@ -67,15 +72,15 @@ def extract_features(x_tr_raw, x_tr_raw_c):
         mean_full, std_full = cv2.meanStdDev(x_tr_raw[i])
         mean_cent, std_cent = cv2.meanStdDev(np.float32(x_tr_raw_c[i]))
 
-        # Add average & standard entire R value to features
-        features.append(mean_full[2][0])
-        features.append(std_full[2][0])
-        # Add average & standard entire G value to features
-        features.append(mean_full[1][0])
-        features.append(std_full[1][0])
-        # Add average & standard entire B value to features
-        features.append(mean_full[0][0])
-        features.append(std_full[0][0])
+        # # Add average & standard entire R value to features
+        # features.append(mean_full[2][0])
+        # features.append(std_full[2][0])
+        # # Add average & standard entire G value to features
+        # features.append(mean_full[1][0])
+        # features.append(std_full[1][0])
+        # # Add average & standard entire B value to features
+        # features.append(mean_full[0][0])
+        # features.append(std_full[0][0])
 
         # Add average & standard center R value to features
         features.append(mean_cent[2][0])
@@ -157,22 +162,23 @@ if __name__ == "__main__":
             "6500", "7000", "7500", "8000", "8500", "9000", "9500", "10000"]
     train_errors = []
     val_errors = []
-    #for n in nums:
+    for n in nums:
 
-    # Process training data and generate model
-    X_tr_raw, X_tr_raw_c, y_tr = label_and_rgb_images("train")
-    X_tr = extract_features(X_tr_raw, X_tr_raw_c)
-    scalar, X_tr = preprocess_data(X_tr)
-    svm_model = generate_svm(X_tr, y_tr)
+        # Process training data and generate model
+        X_tr_raw, X_tr_raw_c, y_tr = label_and_rgb_images("train")
+        X_tr = extract_features(X_tr_raw, X_tr_raw_c)
+        scalar, X_tr = preprocess_data(X_tr)
+        svm_model = generate_svm(X_tr, y_tr, int(n))
 
-    # Use validation set
-    X_valid_raw, X_valid_raw_c, y_valid = label_and_rgb_images("validation")
-    X_valid = extract_features(X_valid_raw, X_valid_raw_c)
-    _, X_valid = preprocess_data(X_valid, scalar)
-    preds = svm_model.predict(X_valid)
-    print(calculate_error(preds, y_valid))
-    preds = svm_model.predict(X_tr)
-    print(calculate_error(preds, y_tr))
-    #print(nums)
-    #print(train_errors)
-    #print(val_errors)
+        # Use validation set
+        X_valid_raw, X_valid_raw_c, y_valid = label_and_rgb_images(
+            "validation")
+        X_valid = extract_features(X_valid_raw, X_valid_raw_c)
+        _, X_valid = preprocess_data(X_valid, scalar)
+        preds = svm_model.predict(X_valid)
+        val_errors.append(calculate_error(preds, y_valid))
+        preds = svm_model.predict(X_tr)
+        train_errors.append(calculate_error(preds, y_tr))
+    print(nums)
+    print(train_errors)
+    print(val_errors)
