@@ -72,15 +72,15 @@ def extract_features(x_tr_raw, x_tr_raw_c):
         mean_full, std_full = cv2.meanStdDev(x_tr_raw[i])
         mean_cent, std_cent = cv2.meanStdDev(np.float32(x_tr_raw_c[i]))
 
-        # Add average & standard entire R value to features
-        features.append(mean_full[2][0])
-        features.append(std_full[2][0])
-        # Add average & standard entire G value to features
-        features.append(mean_full[1][0])
-        features.append(std_full[1][0])
-        # Add average & standard entire B value to features
-        features.append(mean_full[0][0])
-        features.append(std_full[0][0])
+        # # Add average & standard entire R value to features
+        # features.append(mean_full[2][0])
+        # features.append(std_full[2][0])
+        # # Add average & standard entire G value to features
+        # features.append(mean_full[1][0])
+        # features.append(std_full[1][0])
+        # # Add average & standard entire B value to features
+        # features.append(mean_full[0][0])
+        # features.append(std_full[0][0])
 
         # Add average & standard center R value to features
         features.append(mean_cent[2][0])
@@ -157,27 +157,28 @@ def calculate_error(preds, acc):
 
 if __name__ == "__main__":
 
-    # nums = ["1", "10", "100", "250", "500", "1000", "1500", "2000", "2500",
-    #         "3000", "3500", "4000", "4500", "5000", "5500", "6000",
-    #         "6500", "7000", "7500", "8000", "8500", "9000", "9500", "10000"]
-    # train_errors = []
-    # val_errors = []
-    # for n in nums:
+    nums = ["1", "10", "100", "250", "500", "1000", "1500", "2000", "2500",
+            "3000", "3500", "4000", "4500", "5000", "5500", "6000",
+            "6500", "7000", "7500", "8000", "8500", "9000", "9500", "10000"]
+    train_errors = []
+    val_errors = []
+    for n in nums:
 
-    # Process training data and generate model
-    X_tr_raw, X_tr_raw_c, y_tr = label_and_rgb_images("train")
-    X_tr = extract_features(X_tr_raw, X_tr_raw_c)
-    scalar, X_tr = preprocess_data(X_tr)
-    svm_model = generate_svm(X_tr, y_tr)
+        # Process training data and generate model
+        X_tr_raw, X_tr_raw_c, y_tr = label_and_rgb_images("train")
+        X_tr = extract_features(X_tr_raw, X_tr_raw_c)
+        scalar, X_tr = preprocess_data(X_tr)
+        svm_model = generate_svm(X_tr, y_tr, int(n))
 
-    # Use validation set
-    X_valid_raw, X_valid_raw_c, y_valid = label_and_rgb_images("validation")
-    X_valid = extract_features(X_valid_raw, X_valid_raw_c)
-    _, X_valid = preprocess_data(X_valid, scalar)
-    preds = svm_model.predict(X_valid)
-    print(calculate_error(preds, y_valid))
-    preds = svm_model.predict(X_tr)
-    print(calculate_error(preds, y_tr))
-    # print(nums)
-    # print(train_errors)
-    # print(val_errors)
+        # Use validation set
+        X_valid_raw, X_valid_raw_c, y_valid = label_and_rgb_images(
+            "validation")
+        X_valid = extract_features(X_valid_raw, X_valid_raw_c)
+        _, X_valid = preprocess_data(X_valid, scalar)
+        preds = svm_model.predict(X_valid)
+        val_errors.append(calculate_error(preds, y_valid))
+        preds = svm_model.predict(X_tr)
+        train_errors.append(calculate_error(preds, y_tr))
+    print(nums)
+    print(train_errors)
+    print(val_errors)
