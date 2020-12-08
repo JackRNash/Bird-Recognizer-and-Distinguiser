@@ -57,7 +57,7 @@ def preprocess_data():
     Returns the transformation necessary to normalize the image data.
 
     Creates a normalization transformation that results in the training data
-    having a mean of 0 and a standard deviation of 1. 
+    having a mean of 0 and a standard deviation of 1.
     """
     transform = transforms.Compose([
         transforms.ToTensor()
@@ -77,5 +77,15 @@ def preprocess_data():
     ])
 
 
-if __name__ == '__main__':
-    transformation = preprocess_data()
+if __name__ == '__main__
+    # Obtain necessary transformation code
+    data_transform = preprocess_data()
+
+    # Create training and validation datasets
+    image_datasets = {x: datasets.ImageFolder(os.path.join(data_dir, \
+        x if x == 'train' else 'validation'), data_transform) \
+        for x in ['train', 'val']}
+    # Create training and validation dataloaders
+    dataloaders_dict = {x: torch.utils.data.DataLoader(image_datasets[x], \
+        batch_size=batch_size, shuffle=True, num_workers=4) \
+        for x in ['train', 'val']}
