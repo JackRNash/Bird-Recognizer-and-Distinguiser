@@ -15,7 +15,10 @@ torch.manual_seed(4701)
 np.random.seed(4701)
 
 data_dir = '../../dataset/'
+input_dim = 256    # Our dataset images are 256 x 256
+output_dim = 10
 batch_size = 8
+num_epochs = 5     # investigate making larger
 
 
 def calc_mean_std(dataloader):
