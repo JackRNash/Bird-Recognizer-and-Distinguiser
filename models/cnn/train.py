@@ -77,7 +77,7 @@ def preprocess_data():
     ])
 
 
-if __name__ == '__main__
+if __name__ == '__main__':
     # Obtain necessary transformation code
     data_transform = preprocess_data()
 
