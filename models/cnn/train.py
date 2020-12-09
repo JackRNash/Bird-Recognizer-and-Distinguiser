@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
+import torch.nn.functional as Activation
 import torch.optim as optim
 import numpy as np
 import torchvision
@@ -16,33 +16,43 @@ torch.manual_seed(4701)
 np.random.seed(4701)
 
 data_dir = '../../dataset/'
-input_dim = 256    # Our dataset images are 256 x 256
-output_dim = 10
 batch_size = 8
-num_epochs = 5     # investigate making larger
+num_epochs = 10
 
 
-class Net(nn.Module):
+class Lenet(nn.Module):
+    """
+    This class represents a basic model of the Lenet-5 CNN modified to operate on
+    256 x 256 images.
+
+    CITATION: This class and its methods were taken and adapted from the following
+        source: https://pytorch.org/tutorials/beginner/blitz/cifar10_tutorial.html
+    """
+
     def __init__(self):
         super(Net, self).__init__()
-        self.pool_compress = nn.MaxPool2d(8,8)
         self.conv1 = nn.Conv2d(3, 6, 5)
         self.pool1 = nn.MaxPool2d(2, 2)
         self.conv2 = nn.Conv2d(6, 16, 5)
         self.pool2 = nn.MaxPool2d(2, 2)
-        self.fc1 = nn.Linear(5 * 5 * 16, 120)
+        self.fc1 = nn.Linear(61 * 61 * 16, 120)
         self.fc2 = nn.Linear(120, 84)
         self.fc3 = nn.Linear(84, 10)
 
-    def forward(self, x):
-        x = self.pool_compress(x)
-        x = self.pool1(F.relu(self.conv1(x)))
-        x = self.pool2(F.relu(self.conv2(x)))
-        x = x.view(-1, 5 * 5 * 16)
-        x = F.relu(self.fc1(x))
-        x = F.relu(self.fc2(x))
-        x = self.fc3(x)
-        return x
+    def forward(self, val):
+        """
+        Returns the prediction corresponding to a given input image.
+
+        Parameter val: the image to predict
+        Precondition: val is 256x256x3 Torch Tensor object
+        """
+        val = self.pool1(Activation.relu(self.conv1(val)))
+        val = self.pool2(Activation.relu(self.conv2(val)))
+        val = val.view(-1, 61 * 61 * 16)
+        val = Activation.relu(self.fc1(val))
+        val = Activation.relu(self.fc2(val))
+        val = self.fc3(val)
+        return val
 
 
 def calc_mean_std(dataloader):
