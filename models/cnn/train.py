@@ -16,11 +16,12 @@ torch.manual_seed(4701)
 np.random.seed(4701)
 
 data_dir = '../../dataset/'
+net_dir = './lenet5.pth'
 batch_size = 8
 num_epochs = 10
 
 
-class Lenet(nn.Module):
+class Net(nn.Module):
     """
     This class represents a basic model of the Lenet-5 CNN modified to operate on
     256 x 256 images.
@@ -76,8 +77,8 @@ def calc_mean_std(dataloader):
     for data in dataloader:
         img, _ = data
 
-        batch_mean = torch.mean(img, (0,2,3))
-        batch_std = torch.std(img, (0,2,3))
+        batch_mean = torch.mean(img, (0, 2, 3))
+        batch_std = torch.std(img, (0, 2, 3))
 
         mean.append(batch_mean)
         std.append(batch_std)
@@ -101,17 +102,74 @@ def preprocess_data():
     ])
 
     # Creates a dataloader object for the training and validation sets
-    train_dataset = datasets.ImageFolder(os.path.join(data_dir, 'train'), \
-        transform)
-    train_dataloader = torch.utils.data.DataLoader(train_dataset, \
-        batch_size=batch_size, shuffle=True, num_workers=4)
+    train_dataset = datasets.ImageFolder(os.path.join(data_dir, 'train'),
+                                         transform)
+    train_dataloader = torch.utils.data.DataLoader(train_dataset,
+                                                   batch_size=batch_size, shuffle=True, num_workers=4)
 
     mean, std = calc_mean_std(train_dataloader)
 
     return transforms.Compose([
         transforms.ToTensor(),
-        transforms.Normalize(mean,std)
+        transforms.Normalize(mean, std)
     ])
+
+
+def train_model(dataloader, opt):
+    """
+    Trains the CNN on the training data.
+
+    Parameter dataloader: images used to train the CNN
+    Precondition: dataloader is a Torch dataloader object
+
+    Parameter opt: optimizer used to update the CNN after each pass
+    Precondition: opt is a Torch optim object
+
+    CITATION: This function was taken and adapted from the following source:
+        https://forums.fast.ai/t/image-normalization-in-pytorch/7534/7
+    """
+    for _ in range(num_epochs):
+        for data in dataloader:
+            imgs, labels = data
+
+            # Zero the parameter gradients
+            opt.zero_grad()
+
+            # Perform forward-backward pass, then update optimizer
+            outputs = net(imgs)
+            loss = criterion(outputs, labels)
+            loss.backward()
+            opt.step()
+
+
+def test_model(net, dataloader):
+    """
+    Calculates the accuracy of the CNN on an unseen dataset.
+
+    Parameter net: the CNN trained on the training data, used for bird
+    classification
+    Precondition: net is a Net object
+
+    Parameter dataloader: images used to validate the CNN
+    Precondition: dataloader is a Torch dataloader object
+
+    CITATION: This function was taken and adapted from the following source:
+        https://forums.fast.ai/t/image-normalization-in-pytorch/7534/7
+    """
+    correct = 0
+    total = 0
+    with torch.no_grad():
+        for data in dataloader:
+            imgs, labels = data
+            outputs = net(imgs)
+            _, predicted = torch.max(outputs.data, 1)
+            total += labels.size(0)
+            for i in range(len(predicted)):
+                if predicted[i] == labels[i]:
+                    correct += 1
+
+    print('Accuracy of the network on the ' + str(total) +
+          ' test images: %d %%' % (100 * correct / total))
 
 
 if __name__ == '__main__':
@@ -119,61 +177,29 @@ if __name__ == '__main__':
     data_transform = preprocess_data()
 
     # Create training and validation datasets
-    image_datasets = {x: datasets.ImageFolder(os.path.join(data_dir, \
-        x if x == 'train' else 'validation'), data_transform) \
-        for x in ['train', 'val']}
+    image_datasets = {x: datasets.ImageFolder(os.path.join(data_dir,
+                                                           x if x == 'train' else 'validation'), data_transform)
+                      for x in ['train', 'val']}
     # Create training and validation dataloaders
-    dataloaders_dict = {x: torch.utils.data.DataLoader(image_datasets[x], \
-        batch_size=batch_size, shuffle=True, num_workers=0) \
-        for x in ['train', 'val']}
+    dataloaders_dict = {x: torch.utils.data.DataLoader(image_datasets[x],
+                                                       batch_size=batch_size, shuffle=True, num_workers=0)
+                        for x in ['train', 'val']}
 
+    # Create model
     net = Net()
 
+    # Create loss function & establish optimizer
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
 
-    trainloader = dataloaders_dict['train']
+    train_model(dataloaders_dict['train'], optimizer)
 
-    for epoch in range(num_epochs):  # loop over the dataset multiple times
+    """ Remove this store/load functionality eventually """
+    # Store model
+    torch.save(net.state_dict(), net_dir)
 
-        running_loss = 0.0
-        for i, data in enumerate(trainloader, 0):
-            # get the inputs; data is a list of [inputs, labels]
-            inputs, labels = data
-
-            # zero the parameter gradients
-            optimizer.zero_grad()
-
-            # forward + backward + optimize
-            outputs = net(inputs)
-            loss = criterion(outputs, labels)
-            loss.backward()
-            optimizer.step()
-
-            # print statistics
-            running_loss += loss.item()
-            if i % 100 == 99:    # print every 100 mini-batches
-                print('[%d, %5d] loss: %.3f' %
-                    (epoch + 1, i + 1, running_loss / 100))
-                running_loss = 0.0
-
-    print('Finished Training')
-
-    PATH = './lenet5.pth'
-    torch.save(net.state_dict(), PATH)
-
+    # Load model
     net = Net()
-    net.load_state_dict(torch.load(PATH))
+    net.load_state_dict(torch.load(net_dir))
 
-    correct = 0
-    total = 0
-    with torch.no_grad():
-        for data in dataloaders_dict['val']:
-            images, labels = data
-            outputs = net(images)
-            _, predicted = torch.max(outputs.data, 1)
-            total += labels.size(0)
-            correct += (predicted == labels).sum().item()
-
-    print('Accuracy of the network on the 10000 test images: %d %%' % (
-        100 * correct / total))
+    test_model(net, dataloaders_dict['val'])
