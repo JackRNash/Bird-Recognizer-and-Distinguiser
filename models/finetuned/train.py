@@ -26,6 +26,23 @@ num_epochs = 5
 input_size = 224 # 224 x 224 images expected for resnet
 
 def train_model(model, dataloaders, criterion, optimizer, num_epochs=15):
+    """
+    Returns a trained model. 
+    
+    Trains the input model using the provided data, criterion, and optimizer.
+
+    Parameter model: model to be trained
+
+    Parameter dataloaders: dictionary of dataloaders for training and validation
+    Precondition: dataloders bound to keys 'train' and 'val'
+
+    Parameter criterion: criterion for evaluating loss
+
+    Parameter optimizer: optimizer to be used when training
+
+    Parameter num_epochs: number of epochs to train
+
+    """
     since = time.time()
 
     val_acc_history = []
@@ -40,9 +57,9 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=15):
         # Each epoch has a training and validation phase
         for phase in ['train', 'val']:
             if phase == 'train':
-                model.train()  # Set model to training mode
+                model.train()
             else:
-                model.eval()   # Set model to evaluate mode
+                model.eval()
 
             running_loss = 0.0
             running_corrects = 0
@@ -55,8 +72,7 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=15):
                 # zero the parameter gradients
                 optimizer.zero_grad()
 
-                # forward
-                # track history if only in train
+                # forward pass
                 with torch.set_grad_enabled(phase == 'train'):
                     # Get model outputs and calculate loss
                     outputs = model(inputs)
@@ -64,7 +80,7 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=15):
 
                     _, preds = torch.max(outputs, 1)
 
-                    # backward + optimize only if in training phase
+                    # backward pass (if training)
                     if phase == 'train':
                         loss.backward()
                         optimizer.step()
@@ -96,8 +112,12 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=15):
     return model, val_acc_history
 
 def histogram(counts, n = 10):
-    # takes in a list containing values in the range 0,...,n and returns
-    # a list hist where hist[i] is the number of times i appeared in counts
+    """
+    Returns a histogram of the input list of counts
+
+    Histogram takes in a list with values in the range 0,...,n and returns a list 
+    where the ith element is the number of times i appeared in counts
+    """
     hist = [0]*n
     for d in counts:
         hist[d] += 1
@@ -121,10 +141,24 @@ def eval(model, dataloader):
     return running_corrects.double() / len(dataloader.dataset), corrects, incorrects
 
 def freeze(model):
+    """
+    Freezes every layer in the model.
+
+    By freezing each layer, no updates are made to the weights of the model
+    when training.
+    """
     for param in model.parameters():
         param.requires_grad = False
 
 def initialize_model(num_classes, pretrain=True):
+    """
+    Returns an initialized resnet=18 model.
+
+    Initializes a resnet-18 model. If pretrained, then we
+    use the pretrained weights and freeze the model. Otherwise,
+    a fresh model with resnet-18 architecture is used. A linear
+    layer is appended so the output is num_classes.
+    """
     model = models.resnet18(pretrained=pretrain)
     if pretrain:
         freeze(model)
@@ -134,64 +168,76 @@ def initialize_model(num_classes, pretrain=True):
 
 
 def calc_mean_std(dataloader):
-    # from https://forums.fast.ai/t/image-normalization-in-pytorch/7534/7
-    pop_mean = []
-    pop_std = []
-    for data in dataloader:
-        # shape (batch_size, 3, height, width)
-        img, label = data
-        numpy_image = img.numpy()
-        
-        # shape (3,)
-        batch_mean = np.mean(numpy_image, axis=(0,2,3))
-        batch_std = np.std(numpy_image, axis=(0,2,3))
-        
-        pop_mean.append(batch_mean)
-        pop_std.append(batch_std)
+    """
+    Returns a list of the average RGB values and a list of the standard of
+    the RGB values.
 
-    # shape (num_iterations, 3) -> (mean across 0th axis) -> shape (3,)
-    pop_mean = np.array(pop_mean).mean(axis=0)
-    pop_std = np.array(pop_std).mean(axis=0)
-    return pop_mean, pop_std
+    Extracts the mean and standard of RGB values of every image in dataloader
+    and then returns the average.
+
+    Parameter dataloader: images to find the mean and standard of
+    Precondition: dataloader is a Torch dataloader object
+
+    CITATION: This function was taken and adapted from the following source:
+        https://forums.fast.ai/t/image-normalization-in-pytorch/7534/7
+    """
+    mean = []
+    std = []
+
+    # Find and append the mean and standard of each image in dataloader
+    for data in dataloader:
+        img, _ = data
+
+        batch_mean = torch.mean(img, (0,2,3))
+        batch_std = torch.std(img, (0,2,3))
+
+        mean.append(batch_mean)
+        std.append(batch_std)
+
+    # Find and return the mean and standard of every image in dataloader
+    mean = np.mean([m.numpy() for m in mean], axis=0)
+    std = np.mean([s.numpy() for s in std], axis=0)
+
+    return mean, std
+
+def preprocess_data():
+    """
+    Returns the transformation necessary to normalize the image data.
+
+    Creates a normalization transformation that results in the training data
+    having a mean of 0 and a standard deviation of 1.
+    """
+    transform = transforms.Compose([
+        transforms.ToTensor()
+    ])
+
+    # Creates a dataloader object for the training and validation sets
+    train_dataset = datasets.ImageFolder(os.path.join(data_dir, 'train'), \
+        transform)
+    train_dataloader = torch.utils.data.DataLoader(train_dataset, \
+        batch_size=batch_size, shuffle=True, num_workers=4)
+
+    mean, std = calc_mean_std(train_dataloader)
+
+    return transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize(mean,std)
+    ])
 
 
 if __name__ == '__main__':
-    print("PyTorch Version: ",torch.__version__)
-    print("Torchvision Version: ",torchvision.__version__)
     print('GPU Available: ', torch.cuda.is_available())
     model_ft = initialize_model(num_classes)
-
-    # Data augmentation and normalization for training
-    # Just normalization for validation
-    data_transforms = {
-        'train': transforms.Compose([
-            transforms.RandomResizedCrop(input_size),
-            transforms.RandomHorizontalFlip(),
-            transforms.ToTensor(),
-            transforms.Normalize([0.48150042, 0.49749625, 0.4631295], [0.22679698, 0.22562513, 0.26397094])
-            # hard coded mean and std respectively calculated using calc_mean_std
-        ]),
-        'val': transforms.Compose([
-            transforms.Resize(input_size),
-            transforms.CenterCrop(input_size),
-            transforms.ToTensor(),
-            transforms.Normalize([0.48150042, 0.49749625, 0.4631295], [0.22679698, 0.22562513, 0.26397094])
-            # hard coded mean and std respectively calculated using calc_mean_std
-        ]),
-    }
+    transforms = preprocess_data()
 
     print("Initializing Datasets and Dataloaders...")
-
-    # Create training and validation datasets
-    image_datasets = {x: datasets.ImageFolder(os.path.join(data_dir, x if x == 'train' else 'validation'), data_transforms[x]) for x in ['train', 'val']}
-    # Create training and validation dataloaders
+    image_datasets = {x: datasets.ImageFolder(os.path.join(data_dir, x if x == 'train' else 'validation'), transforms) for x in ['train', 'val']}
     dataloaders_dict = {x: torch.utils.data.DataLoader(image_datasets[x], batch_size=batch_size, shuffle=True, num_workers=4) for x in ['train', 'val']}
 
     classes = image_datasets['train'].classes
-    # Detect if we have a GPU available
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-    # Send the model to GPU
+    # Determine device (GPU if available, else CPU) & send model to it
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     model_ft = model_ft.to(device)
 
     # Gather the parameters to be optimized/updated in this run. If we are
@@ -199,16 +245,15 @@ if __name__ == '__main__':
     #  doing feature extract method, we will only update the parameters
     #  that we have just initialized, i.e. the parameters with requires_grad
     #  is True.
-    params_to_update = model_ft.parameters()
+    # params_to_update = model_ft.parameters()
     params_to_update = []
     for name,param in model_ft.named_parameters():
         if param.requires_grad == True:
             params_to_update.append(param)
-            print("\t",name)
 
     # Observe that all parameters are being optimized
     optimizer_ft = optim.SGD(params_to_update, lr=0.001, momentum=0.9)
-    # Setup the loss fxn
+    # Setup the loss fxn    
     criterion = nn.CrossEntropyLoss()
 
     # Train and evaluate
