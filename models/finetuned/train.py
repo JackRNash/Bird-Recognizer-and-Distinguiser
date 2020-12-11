@@ -252,7 +252,7 @@ if __name__ == '__main__':
             params_to_update.append(param)
 
     # Observe that all parameters are being optimized
-    optimizer_ft = optim.SGD(params_to_update, lr=0.001, momentum=0.9)
+    optimizer_ft = optim.Adam(params_to_update, lr=0.001)
     # Setup the loss fxn    
     criterion = nn.CrossEntropyLoss()
 
