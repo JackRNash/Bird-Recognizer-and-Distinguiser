@@ -1,6 +1,8 @@
 import numpy as np
 import os
 import cv2
+import matplotlib.pyplot as plt
+
 from sklearn import preprocessing
 from sklearn.svm import SVC
 
@@ -72,25 +74,25 @@ def extract_features(x_tr_raw, x_tr_raw_c):
         mean_full, std_full = cv2.meanStdDev(x_tr_raw[i])
         mean_cent, std_cent = cv2.meanStdDev(np.float32(x_tr_raw_c[i]))
 
-        # # Add average & standard entire R value to features
-        # features.append(mean_full[2][0])
-        # features.append(std_full[2][0])
-        # # Add average & standard entire G value to features
-        # features.append(mean_full[1][0])
-        # features.append(std_full[1][0])
-        # # Add average & standard entire B value to features
-        # features.append(mean_full[0][0])
-        # features.append(std_full[0][0])
+        # Add average & standard entire R value to features
+        features.append(mean_full[2][0])
+        features.append(std_full[2][0])
+        # Add average & standard entire G value to features
+        features.append(mean_full[1][0])
+        features.append(std_full[1][0])
+        # Add average & standard entire B value to features
+        features.append(mean_full[0][0])
+        features.append(std_full[0][0])
 
-        # Add average & standard center R value to features
-        features.append(mean_cent[2][0])
-        features.append(std_cent[2][0])
-        # Add average & standard center G value to features
-        features.append(mean_cent[1][0])
-        features.append(std_cent[1][0])
-        # Add average & standard center B value to features
-        features.append(mean_cent[0][0])
-        features.append(std_cent[0][0])
+        # # Add average & standard center R value to features
+        # features.append(mean_cent[2][0])
+        # features.append(std_cent[2][0])
+        # # Add average & standard center G value to features
+        # features.append(mean_cent[1][0])
+        # features.append(std_cent[1][0])
+        # # Add average & standard center B value to features
+        # features.append(mean_cent[0][0])
+        # features.append(std_cent[0][0])
 
         x_tr.append(features)
 
@@ -157,9 +159,11 @@ def calculate_error(preds, acc):
 
 if __name__ == "__main__":
 
-    nums = ["1", "10", "100", "250", "500", "1000", "1500", "2000", "2500",
-            "3000", "3500", "4000", "4500", "5000", "5500", "6000",
-            "6500", "7000", "7500", "8000", "8500", "9000", "9500", "10000"]
+    nums = []
+    curr = .1
+    for i in range(40):
+        nums.append(curr)
+        curr += .1
     train_errors = []
     val_errors = []
     for n in nums:
@@ -168,7 +172,7 @@ if __name__ == "__main__":
         X_tr_raw, X_tr_raw_c, y_tr = label_and_rgb_images("train")
         X_tr = extract_features(X_tr_raw, X_tr_raw_c)
         scalar, X_tr = preprocess_data(X_tr)
-        svm_model = generate_svm(X_tr, y_tr, int(n))
+        svm_model = generate_svm(X_tr, y_tr, n)
 
         # Use validation set
         X_valid_raw, X_valid_raw_c, y_valid = label_and_rgb_images(
@@ -179,6 +183,13 @@ if __name__ == "__main__":
         val_errors.append(calculate_error(preds, y_valid))
         preds = svm_model.predict(X_tr)
         train_errors.append(calculate_error(preds, y_tr))
-    print(nums)
-    print(train_errors)
-    print(val_errors)
+
+    plt.plot(nums, [x*100 for x in train_errors], 'r', label="training")
+    plt.plot(nums, [x*100 for x in val_errors], 'b', label="validation")
+    plt.axis([0, 4, 0, 100])
+    plt.xlabel("C value")
+    plt.ylabel("Percent error")
+    plt.title("Error vs C value for SVM w/ 6 general features")
+    plt.legend(loc="upper right")
+    plt.savefig('6_feature.png')
+    plt.clf()
