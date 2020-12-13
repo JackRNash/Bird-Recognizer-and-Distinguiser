@@ -9,6 +9,7 @@ import time
 import os
 import copy
 
+from sklearn.metrics import confusion_matrix
 from torchvision import datasets, models, transforms
 from tqdm import tqdm
 
@@ -18,7 +19,7 @@ np.random.seed(4701)
 data_dir = '../../dataset/'
 net_dir = './lenet5.pth'
 batch_size = 8
-num_epochs = 10
+num_epochs = 1
 
 
 class Net(nn.Module):
@@ -115,7 +116,7 @@ def preprocess_data():
     ])
 
 
-def train_model(dataloader, opt):
+def train_model(dataloader, opt, val_dataloader):
     """
     Trains the CNN on the training data.
 
@@ -128,7 +129,11 @@ def train_model(dataloader, opt):
     CITATION: This function was taken and adapted from the following source:
         https://forums.fast.ai/t/image-normalization-in-pytorch/7534/7
     """
-    for _ in range(num_epochs):
+    for epoch in range(num_epochs):
+        total_train = 0
+        correct_train = 0
+        total_val = 0
+        correct_val = 0
         for data in dataloader:
             imgs, labels = data
 
@@ -140,6 +145,26 @@ def train_model(dataloader, opt):
             loss = criterion(outputs, labels)
             loss.backward()
             opt.step()
+            _, predicted = torch.max(outputs.data, 1)
+            total_train += labels.nelement()
+            correct_train += predicted.eq(labels.data).sum().item()
+            train_accuracy = 100 * correct_train / total_train
+        for data in val_dataloader:
+            imgs, labels = data
+
+            # Zero the parameter gradients
+            opt.zero_grad()
+
+            # Perform forward-backward pass, then update optimizer
+            outputs = net(imgs)
+            loss_val = criterion(outputs, labels)
+            # loss_val.backward()
+            _, predicted = torch.max(outputs.data, 1)
+            total_val += labels.nelement()
+            correct_val += predicted.eq(labels.data).sum().item()
+            val_accuracy = 100 * correct_val / total_val
+        print('Epoch {}, train Loss: {:.3f}'.format(epoch, loss.item()),
+              "Training Accuracy: %d %%" % (train_accuracy), 'Epoch {}, val Loss: {:.3f}'.format(epoch, loss_val.item()), "Val Accuracy: %d %%" % (val_accuracy))
 
 
 def test_model(net, dataloader):
@@ -172,6 +197,42 @@ def test_model(net, dataloader):
           ' test images: %d %%' % (100 * correct / total))
 
 
+def plot_confusion_matrix(true, preds, classes):
+    cmatrix = confusion_matrix(true, preds)
+    threshold = np.min(np.diagonal(cmatrix))
+    fig, ax = plt.subplots()
+    ax.set(xticks=np.arange(cmatrix.shape[1]),
+           yticks=np.arange(cmatrix.shape[0]),
+           xticklabels=classes,
+           yticklabels=classes,
+           ylabel='True label',
+           xlabel='Predicted label')
+    ax.tick_params(axis='x', labelrotation=90)
+    for i in range(cmatrix.shape[0]):
+        for j in range(cmatrix.shape[1]):
+            if cmatrix[i, j] > 0:
+                ax.text(j, i, cmatrix[i, j], ha='center', va='center',
+                        color='white' if cmatrix[i, j] < threshold else 'black')
+    fig.set_size_inches(18.5, 10.5)
+    fig.tight_layout()
+    ax.imshow(cmatrix)
+
+
+def get_labels_and_predictions(model, dataloader, device):
+    preds, labels = [], []
+    for data, label in tqdm(dataloader):
+        data = data.to(device)
+        output = model(data)
+        _, pred = torch.max(output, 1)
+        if len(label) != len(pred):
+            print('UH OH', len(label), len(pred), label, pred)
+        labels.append(label.detach().numpy())
+        preds.append(pred.cpu().detach().numpy())
+    preds = np.concatenate(preds, axis=0)
+    labels = np.concatenate(labels, axis=0)
+    return preds, labels
+
+
 if __name__ == '__main__':
     # Obtain necessary transformation code
     data_transform = preprocess_data()
@@ -191,9 +252,12 @@ if __name__ == '__main__':
     # Create loss function & establish optimizer
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
-
-    train_model(dataloaders_dict['train'], optimizer)
-
+    train_model(dataloaders_dict['train'], optimizer, dataloaders_dict['val'])
+    # epochs = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    # t_a = [18, 33, 41, 48, 57, 67, 78, 88, 91, 94]
+    # v_a = [29, 37, 38, 44, 46, 45, 49, 48, 49, 45]
+    # t_l = [1.943, 1.816, 1.143, 1.927, 1.030, 1.103, .791, .161, .545, .320]
+    # v_l = [3.055, .919, 2.345, 4.132, .222, .486, 6.959, .159, .016, .010]
     """ Remove this store/load functionality eventually """
     # Store model
     torch.save(net.state_dict(), net_dir)
@@ -203,3 +267,28 @@ if __name__ == '__main__':
     net.load_state_dict(torch.load(net_dir))
 
     test_model(net, dataloaders_dict['val'])
+
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    net = net.to(device)
+
+    val_preds_full, val_true_full = get_labels_and_predictions(net,
+                                                               dataloaders_dict['val'], device)
+    train_preds_full, train_true_full = get_labels_and_predictions(net,
+                                                                   dataloaders_dict['train'], device)
+    # plot_confusion_matrix(val_true_full, val_preds_full,
+    #                       image_datasets['val'].classes)
+    # plt.savefig('first_conf.png')
+    # plot_confusion_matrix(train_true_full, train_preds_full,
+    #                       image_datasets['train'].classes)
+    # plt.savefig('second_conf.png')
+    # plt.clf()
+    # print([(1-x)*100 for x in t_a])
+    # plt.plot(epochs, [x for x in v_l], 'r', label="training")
+    # plt.plot(epochs, [x for x in t_l], 'b', label="validation")
+    # plt.axis([1, 10, 0, 7])
+    # plt.xlabel("Number of Epochs")
+    # plt.ylabel("Loss")
+    # plt.title("Train vs Validation Loss")
+    # plt.legend(loc="upper right")
+    # plt.savefig('cnn_loss.png')
+    # plt.clf()
