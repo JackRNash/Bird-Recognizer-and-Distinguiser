@@ -253,11 +253,11 @@ if __name__ == '__main__':
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
     train_model(dataloaders_dict['train'], optimizer, dataloaders_dict['val'])
-    # epochs = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-    # t_a = [18, 33, 41, 48, 57, 67, 78, 88, 91, 94]
-    # v_a = [29, 37, 38, 44, 46, 45, 49, 48, 49, 45]
-    # t_l = [1.943, 1.816, 1.143, 1.927, 1.030, 1.103, .791, .161, .545, .320]
-    # v_l = [3.055, .919, 2.345, 4.132, .222, .486, 6.959, .159, .016, .010]
+    epochs = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    t_a = [18, 33, 41, 48, 57, 67, 78, 88, 91, 94]
+    v_a = [29, 37, 38, 44, 46, 45, 49, 48, 49, 45]
+    t_l = [1.943, 1.816, 1.143, 1.927, 1.030, 1.103, .791, .161, .545, .320]
+    v_l = [3.055, .919, 2.345, 4.132, .222, .486, 6.959, .159, .016, .010]
     """ Remove this store/load functionality eventually """
     # Store model
     torch.save(net.state_dict(), net_dir)
@@ -281,14 +281,13 @@ if __name__ == '__main__':
     # plot_confusion_matrix(train_true_full, train_preds_full,
     #                       image_datasets['train'].classes)
     # plt.savefig('second_conf.png')
-    # plt.clf()
-    # print([(1-x)*100 for x in t_a])
-    # plt.plot(epochs, [x for x in v_l], 'r', label="training")
-    # plt.plot(epochs, [x for x in t_l], 'b', label="validation")
-    # plt.axis([1, 10, 0, 7])
-    # plt.xlabel("Number of Epochs")
-    # plt.ylabel("Loss")
-    # plt.title("Train vs Validation Loss")
-    # plt.legend(loc="upper right")
-    # plt.savefig('cnn_loss.png')
-    # plt.clf()
+    plt.clf()
+    plt.plot(epochs, [(100-x) for x in t_a], 'r', label="training")
+    plt.plot(epochs, [(100-x) for x in v_a], 'b', label="validation")
+    plt.axis([1, 10, 0, 100])
+    plt.xlabel("Number of Epochs", fontsize=12)
+    plt.ylabel("Error", fontsize=12)
+    plt.title("Train vs Validation Error", fontsize=15)
+    plt.legend(loc="upper right")
+    plt.savefig('cnn_acc.png')
+    plt.clf()
