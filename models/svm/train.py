@@ -1,8 +1,10 @@
 import numpy as np
 import os
 import cv2
+import time
 import matplotlib.pyplot as plt
 
+from sklearn.metrics import confusion_matrix
 from sklearn import preprocessing
 from sklearn.svm import SVC
 
@@ -84,15 +86,15 @@ def extract_features(x_tr_raw, x_tr_raw_c):
         features.append(mean_full[0][0])
         features.append(std_full[0][0])
 
-        # # Add average & standard center R value to features
-        # features.append(mean_cent[2][0])
-        # features.append(std_cent[2][0])
-        # # Add average & standard center G value to features
-        # features.append(mean_cent[1][0])
-        # features.append(std_cent[1][0])
-        # # Add average & standard center B value to features
-        # features.append(mean_cent[0][0])
-        # features.append(std_cent[0][0])
+        # Add average & standard center R value to features
+        features.append(mean_cent[2][0])
+        features.append(std_cent[2][0])
+        # Add average & standard center G value to features
+        features.append(mean_cent[1][0])
+        features.append(std_cent[1][0])
+        # Add average & standard center B value to features
+        features.append(mean_cent[0][0])
+        features.append(std_cent[0][0])
 
         x_tr.append(features)
 
@@ -157,13 +159,35 @@ def calculate_error(preds, acc):
     return error/len(preds)
 
 
-if __name__ == "__main__":
+def plot_confusion_matrix(true, preds, classes):
+    assert len(true) == len(preds), "Oh no"
+    cmatrix = confusion_matrix(true, preds)
+    threshold = np.min(np.diagonal(cmatrix))
+    fig, ax = plt.subplots()
+    ax.set(xticks=np.arange(cmatrix.shape[1]),
+           yticks=np.arange(cmatrix.shape[0]),
+           xticklabels=classes,
+           yticklabels=classes,
+           ylabel='True label',
+           xlabel='Predicted label')
+    ax.tick_params(axis='x', labelrotation=90)
+    for i in range(cmatrix.shape[0]):
+        for j in range(cmatrix.shape[1]):
+            if cmatrix[i, j] > 0:
+                ax.text(j, i, cmatrix[i, j], ha='center', va='center',
+                        color='white' if cmatrix[i, j] < threshold else 'black')
+    fig.set_size_inches(18.5, 10.5)
+    fig.tight_layout()
+    ax.imshow(cmatrix)
 
+
+if __name__ == "__main__":
+    # C = 468 is best C value
     nums = []
-    curr = .1
-    for i in range(40):
+    curr = 468
+    for i in range(1):
         nums.append(curr)
-        curr += .1
+        curr += 1
     train_errors = []
     val_errors = []
     for n in nums:
@@ -179,17 +203,19 @@ if __name__ == "__main__":
             "validation")
         X_valid = extract_features(X_valid_raw, X_valid_raw_c)
         _, X_valid = preprocess_data(X_valid, scalar)
-        preds = svm_model.predict(X_valid)
-        val_errors.append(calculate_error(preds, y_valid))
+        preds_val = svm_model.predict(X_valid)
+        val_errors.append(calculate_error(preds_val, y_valid))
         preds = svm_model.predict(X_tr)
         train_errors.append(calculate_error(preds, y_tr))
-
-    plt.plot(nums, [x*100 for x in train_errors], 'r', label="training")
-    plt.plot(nums, [x*100 for x in val_errors], 'b', label="validation")
-    plt.axis([0, 4, 0, 100])
-    plt.xlabel("C value")
-    plt.ylabel("Percent error")
-    plt.title("Error vs C value for SVM w/ 6 general features")
-    plt.legend(loc="upper right")
-    plt.savefig('6_feature.png')
-    plt.clf()
+    # plot_confusion_matrix(y_valid, preds_val, ['bald_eagle', 'barn_owl', 'belted_kingfisher', 'blue_jay', 'chipping_sparrow',
+    #                                            'osprey', 'red_bellied_woodpecker', 'red_tailed_hawk', 'red_winged_blackbird', 'tree_swallow'])
+    # plt.savefig('svm_conf.png')
+    # plt.plot(nums, [x*100 for x in train_errors], 'r', label="training")
+    # plt.plot(nums, [x*100 for x in val_errors], 'b', label="validation")
+    # plt.axis([0, 500, 0, 100])
+    # plt.xlabel("C value")
+    # plt.ylabel("Percent error")
+    # plt.title("Error vs C value for SVM w/ 12 general features")
+    # plt.legend(loc="upper right")
+    # plt.savefig('12_feature.png')
+    # plt.clf()
