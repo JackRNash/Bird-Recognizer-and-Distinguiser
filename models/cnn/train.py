@@ -19,7 +19,7 @@ np.random.seed(4701)
 data_dir = '../../dataset/'
 net_dir = './lenet5.pth'
 batch_size = 8
-num_epochs = 1
+num_epochs = 7
 
 
 class Net(nn.Module):
@@ -239,12 +239,12 @@ if __name__ == '__main__':
 
     # Create training and validation datasets
     image_datasets = {x: datasets.ImageFolder(os.path.join(data_dir,
-                                                           x if x == 'train' else 'validation'), data_transform)
-                      for x in ['train', 'val']}
+                                                           x if x != 'val' else 'validation'), data_transform)
+                      for x in ['train', 'val', 'test']}
     # Create training and validation dataloaders
     dataloaders_dict = {x: torch.utils.data.DataLoader(image_datasets[x],
                                                        batch_size=batch_size, shuffle=True, num_workers=0)
-                        for x in ['train', 'val']}
+                        for x in ['train', 'val', 'test']}
 
     # Create model
     net = Net()
@@ -253,11 +253,11 @@ if __name__ == '__main__':
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
     train_model(dataloaders_dict['train'], optimizer, dataloaders_dict['val'])
-    epochs = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-    t_a = [18, 33, 41, 48, 57, 67, 78, 88, 91, 94]
-    v_a = [29, 37, 38, 44, 46, 45, 49, 48, 49, 45]
-    t_l = [1.943, 1.816, 1.143, 1.927, 1.030, 1.103, .791, .161, .545, .320]
-    v_l = [3.055, .919, 2.345, 4.132, .222, .486, 6.959, .159, .016, .010]
+    # epochs = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    # t_a = [18, 33, 41, 48, 57, 67, 78, 88, 91, 94]
+    # v_a = [29, 37, 38, 44, 46, 45, 49, 48, 49, 45]
+    # t_l = [1.943, 1.816, 1.143, 1.927, 1.030, 1.103, .791, .161, .545, .320]
+    # v_l = [3.055, .919, 2.345, 4.132, .222, .486, 6.959, .159, .016, .010]
     """ Remove this store/load functionality eventually """
     # Store model
     torch.save(net.state_dict(), net_dir)
@@ -267,6 +267,9 @@ if __name__ == '__main__':
     net.load_state_dict(torch.load(net_dir))
 
     test_model(net, dataloaders_dict['val'])
+
+    print("Testing: ")
+    test_model(net, dataloaders_dict['test'])
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     net = net.to(device)
@@ -281,13 +284,13 @@ if __name__ == '__main__':
     # plot_confusion_matrix(train_true_full, train_preds_full,
     #                       image_datasets['train'].classes)
     # plt.savefig('second_conf.png')
-    plt.clf()
-    plt.plot(epochs, [(100-x) for x in t_a], 'r', label="training")
-    plt.plot(epochs, [(100-x) for x in v_a], 'b', label="validation")
-    plt.axis([1, 10, 0, 100])
-    plt.xlabel("Number of Epochs", fontsize=12)
-    plt.ylabel("Error", fontsize=12)
-    plt.title("Train vs Validation Error", fontsize=15)
-    plt.legend(loc="upper right")
-    plt.savefig('cnn_acc.png')
-    plt.clf()
+    # plt.clf()
+    # plt.plot(epochs, [(100-x) for x in t_a], 'r', label="training")
+    # plt.plot(epochs, [(100-x) for x in v_a], 'b', label="validation")
+    # plt.axis([1, 10, 0, 100])
+    # plt.xlabel("Number of Epochs", fontsize=12)
+    # plt.ylabel("Error", fontsize=12)
+    # plt.title("Train vs Validation Error", fontsize=15)
+    # plt.legend(loc="upper right")
+    # plt.savefig('cnn_acc.png')
+    # plt.clf()

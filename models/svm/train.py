@@ -182,9 +182,9 @@ def plot_confusion_matrix(true, preds, classes):
 
 
 if __name__ == "__main__":
-    # C = 468 is best C value
+    # C = 38 is best C value
     nums = []
-    curr = 468
+    curr = 38
     for i in range(1):
         nums.append(curr)
         curr += 1
@@ -204,9 +204,16 @@ if __name__ == "__main__":
         X_valid = extract_features(X_valid_raw, X_valid_raw_c)
         _, X_valid = preprocess_data(X_valid, scalar)
         preds_val = svm_model.predict(X_valid)
-        val_errors.append(calculate_error(preds_val, y_valid))
+        print(1-calculate_error(preds_val, y_valid))
         preds = svm_model.predict(X_tr)
-        train_errors.append(calculate_error(preds, y_tr))
+        print(1-calculate_error(preds, y_tr))
+
+        X_test_raw, X_test_raw_c, y_test = label_and_rgb_images(
+            "test")
+        X_test = extract_features(X_test_raw, X_test_raw_c)
+        _, X_test = preprocess_data(X_test, scalar)
+        preds_test = svm_model.predict(X_test)
+        print(1-calculate_error(preds_test, y_test))
     # plot_confusion_matrix(y_valid, preds_val, ['bald_eagle', 'barn_owl', 'belted_kingfisher', 'blue_jay', 'chipping_sparrow',
     #                                            'osprey', 'red_bellied_woodpecker', 'red_tailed_hawk', 'red_winged_blackbird', 'tree_swallow'])
     # plt.savefig('svm_conf.png')
