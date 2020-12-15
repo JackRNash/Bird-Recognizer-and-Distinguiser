@@ -19,7 +19,7 @@ np.random.seed(4701)
 data_dir = '../../dataset/'
 net_dir = './lenet5.pth'
 batch_size = 8
-num_epochs = 7
+num_epochs = 5
 
 
 class Net(nn.Module):
@@ -33,11 +33,11 @@ class Net(nn.Module):
 
     def __init__(self):
         super(Net, self).__init__()
-        self.conv1 = nn.Conv2d(3, 6, 5)
+        self.conv1 = nn.Conv2d(3, 18, 5)
         self.pool1 = nn.MaxPool2d(2, 2)
-        self.conv2 = nn.Conv2d(6, 16, 5)
+        self.conv2 = nn.Conv2d(18, 54, 5)
         self.pool2 = nn.MaxPool2d(2, 2)
-        self.fc1 = nn.Linear(61 * 61 * 16, 120)
+        self.fc1 = nn.Linear(61 * 61 * 54, 120)
         self.fc2 = nn.Linear(120, 84)
         self.fc3 = nn.Linear(84, 10)
 
@@ -50,7 +50,7 @@ class Net(nn.Module):
         """
         val = self.pool1(Activation.relu(self.conv1(val)))
         val = self.pool2(Activation.relu(self.conv2(val)))
-        val = val.view(-1, 61 * 61 * 16)
+        val = val.view(-1, 61 * 61 * 54)
         val = Activation.relu(self.fc1(val))
         val = Activation.relu(self.fc2(val))
         val = self.fc3(val)
@@ -163,6 +163,8 @@ def train_model(dataloader, opt, val_dataloader):
             total_val += labels.nelement()
             correct_val += predicted.eq(labels.data).sum().item()
             val_accuracy = 100 * correct_val / total_val
+        print(train_accuracy)
+        print(val_accuracy)
         print('Epoch {}, train Loss: {:.3f}'.format(epoch, loss.item()),
               "Training Accuracy: %d %%" % (train_accuracy), 'Epoch {}, val Loss: {:.3f}'.format(epoch, loss_val.item()), "Val Accuracy: %d %%" % (val_accuracy))
 
@@ -192,7 +194,7 @@ def test_model(net, dataloader):
             for i in range(len(predicted)):
                 if predicted[i] == labels[i]:
                     correct += 1
-
+    print(100 * correct / total)
     print('Accuracy of the network on the ' + str(total) +
           ' test images: %d %%' % (100 * correct / total))
 
@@ -272,12 +274,17 @@ if __name__ == '__main__':
     # Create loss function & establish optimizer
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
+    start_time = time.time()
     train_model(dataloaders_dict['train'], optimizer, dataloaders_dict['val'])
-    # epochs = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-    # t_a = [18, 33, 41, 48, 57, 67, 78, 88, 91, 94]
-    # v_a = [29, 37, 38, 44, 46, 45, 49, 48, 49, 45]
-    # t_l = [1.943, 1.816, 1.143, 1.927, 1.030, 1.103, .791, .161, .545, .320]
-    # v_l = [3.055, .919, 2.345, 4.132, .222, .486, 6.959, .159, .016, .010]
+    print("Time taken: ")
+    print("--- %s seconds ---" % (time.time() - start_time))
+    epochs = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    t_a = [25.35, 37.86, 52.28, 60.49, 73.26,
+           85.54, 92.59, 96.21, 99.06, 96.25]
+    v_a = [32.64, 42.62, 45.95, 44.28, 50.73,
+           50.10, 49.90, 48.86, 51.77, 50.52]
+    t_l = [1.688, 1.328, 1.694, 0.716, 1.103, .474, .162, .089, .003, 1.129]
+    v_l = [1.876, 1.129, 0.876, 1.142, .336, .173, .785, 3.857, .004, .019]
     """ Remove this store/load functionality eventually """
     # Store model
     torch.save(net.state_dict(), net_dir)
