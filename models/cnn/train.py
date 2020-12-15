@@ -197,22 +197,42 @@ def test_model(net, dataloader):
           ' test images: %d %%' % (100 * correct / total))
 
 
-def plot_confusion_matrix(true, preds, classes):
+def plot_confusion_matrix(true, preds, classes, title):
+    """
+    Plots a confusion matrix based on predictions vs actual results.
+
+    Creates a confusion matrix for all [classes] and saves it to plt.
+
+    Parameter true: correct classifications
+    Precondition: a list of integer classifications
+
+    Parameter preds: predicted classifications
+    Precondition: a list of integer classifications
+
+    Parameter classes: all possible predictions
+    Precondition: a list of strings
+
+    Parameter title: title for the graph
+    Precondition: a string
+    """
     cmatrix = confusion_matrix(true, preds)
     threshold = np.min(np.diagonal(cmatrix))
     fig, ax = plt.subplots()
     ax.set(xticks=np.arange(cmatrix.shape[1]),
            yticks=np.arange(cmatrix.shape[0]),
            xticklabels=classes,
-           yticklabels=classes,
-           ylabel='True label',
-           xlabel='Predicted label')
+           yticklabels=classes)
+    ax.set_ylabel('True label', fontsize=22)
+    ax.set_xlabel('Predicted label', fontsize=22)
+    ax.set_title(title, fontsize=22)
     ax.tick_params(axis='x', labelrotation=90)
     for i in range(cmatrix.shape[0]):
         for j in range(cmatrix.shape[1]):
             if cmatrix[i, j] > 0:
                 ax.text(j, i, cmatrix[i, j], ha='center', va='center',
-                        color='white' if cmatrix[i, j] < threshold else 'black')
+                        size=22, color='white' if cmatrix[i, j] < threshold else 'black')
+    for label in (ax.get_xticklabels() + ax.get_yticklabels()):
+        label.set_fontsize(15)
     fig.set_size_inches(18.5, 10.5)
     fig.tight_layout()
     ax.imshow(cmatrix)
@@ -278,9 +298,9 @@ if __name__ == '__main__':
                                                                dataloaders_dict['val'], device)
     train_preds_full, train_true_full = get_labels_and_predictions(net,
                                                                    dataloaders_dict['train'], device)
-    # plot_confusion_matrix(val_true_full, val_preds_full,
-    #                       image_datasets['val'].classes)
-    # plt.savefig('first_conf.png')
+    plot_confusion_matrix(val_true_full, val_preds_full,
+                          image_datasets['val'].classes, "Validation Confusion Matrix for CNN")
+    plt.savefig('first_conf.png')
     # plot_confusion_matrix(train_true_full, train_preds_full,
     #                       image_datasets['train'].classes)
     # plt.savefig('second_conf.png')

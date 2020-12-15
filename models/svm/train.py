@@ -159,23 +159,42 @@ def calculate_error(preds, acc):
     return error/len(preds)
 
 
-def plot_confusion_matrix(true, preds, classes):
-    assert len(true) == len(preds), "Oh no"
+def plot_confusion_matrix(true, preds, classes, title):
+    """
+    Plots a confusion matrix based on predictions vs actual results.
+
+    Creates a confusion matrix for all [classes] and saves it to plt.
+
+    Parameter true: correct classifications
+    Precondition: a list of integer classifications
+
+    Parameter preds: predicted classifications
+    Precondition: a list of integer classifications
+
+    Parameter classes: all possible predictions
+    Precondition: a list of strings
+
+    Parameter title: title for the graph
+    Precondition: a string
+    """
     cmatrix = confusion_matrix(true, preds)
     threshold = np.min(np.diagonal(cmatrix))
     fig, ax = plt.subplots()
     ax.set(xticks=np.arange(cmatrix.shape[1]),
            yticks=np.arange(cmatrix.shape[0]),
            xticklabels=classes,
-           yticklabels=classes,
-           ylabel='True label',
-           xlabel='Predicted label')
+           yticklabels=classes)
+    ax.set_ylabel('True label', fontsize=22)
+    ax.set_xlabel('Predicted label', fontsize=22)
+    ax.set_title(title, fontsize=22)
     ax.tick_params(axis='x', labelrotation=90)
     for i in range(cmatrix.shape[0]):
         for j in range(cmatrix.shape[1]):
             if cmatrix[i, j] > 0:
                 ax.text(j, i, cmatrix[i, j], ha='center', va='center',
-                        color='white' if cmatrix[i, j] < threshold else 'black')
+                        size=22, color='white' if cmatrix[i, j] < threshold else 'black')
+    for label in (ax.get_xticklabels() + ax.get_yticklabels()):
+        label.set_fontsize(15)
     fig.set_size_inches(18.5, 10.5)
     fig.tight_layout()
     ax.imshow(cmatrix)
@@ -208,14 +227,16 @@ if __name__ == "__main__":
         preds = svm_model.predict(X_tr)
         print(1-calculate_error(preds, y_tr))
 
+        # Use test set
         X_test_raw, X_test_raw_c, y_test = label_and_rgb_images(
             "test")
         X_test = extract_features(X_test_raw, X_test_raw_c)
         _, X_test = preprocess_data(X_test, scalar)
         preds_test = svm_model.predict(X_test)
         print(1-calculate_error(preds_test, y_test))
+
     # plot_confusion_matrix(y_valid, preds_val, ['bald_eagle', 'barn_owl', 'belted_kingfisher', 'blue_jay', 'chipping_sparrow',
-    #                                            'osprey', 'red_bellied_woodpecker', 'red_tailed_hawk', 'red_winged_blackbird', 'tree_swallow'])
+    #                                            'osprey', 'red_bellied_woodpecker', 'red_tailed_hawk', 'red_winged_blackbird', 'tree_swallow'], "Validation Confusion Matrix for SVM")
     # plt.savefig('svm_conf.png')
     # plt.plot(nums, [x*100 for x in train_errors], 'r', label="training")
     # plt.plot(nums, [x*100 for x in val_errors], 'b', label="validation")
