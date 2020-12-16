@@ -302,11 +302,11 @@ if __name__ == '__main__':
     net = net.to(device)
 
     val_preds_full, val_true_full = get_labels_and_predictions(net,
-                                                               dataloaders_dict['val'], device)
+                                                               dataloaders_dict['test'], device)
     train_preds_full, train_true_full = get_labels_and_predictions(net,
                                                                    dataloaders_dict['train'], device)
     plot_confusion_matrix(val_true_full, val_preds_full,
-                          image_datasets['val'].classes, "Validation Confusion Matrix for CNN")
+                          image_datasets['test'].classes, "Test Confusion Matrix for CNN")
     plt.savefig('first_conf.png')
     # plot_confusion_matrix(train_true_full, train_preds_full,
     #                       image_datasets['train'].classes)

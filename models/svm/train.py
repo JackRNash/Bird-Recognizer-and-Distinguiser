@@ -235,9 +235,9 @@ if __name__ == "__main__":
         preds_test = svm_model.predict(X_test)
         print(1-calculate_error(preds_test, y_test))
 
-    # plot_confusion_matrix(y_valid, preds_val, ['bald_eagle', 'barn_owl', 'belted_kingfisher', 'blue_jay', 'chipping_sparrow',
-    #                                            'osprey', 'red_bellied_woodpecker', 'red_tailed_hawk', 'red_winged_blackbird', 'tree_swallow'], "Validation Confusion Matrix for SVM")
-    # plt.savefig('svm_conf.png')
+    plot_confusion_matrix(y_test, preds_test, ['bald_eagle', 'barn_owl', 'belted_kingfisher', 'blue_jay', 'chipping_sparrow',
+                                               'osprey', 'red_bellied_woodpecker', 'red_tailed_hawk', 'red_winged_blackbird', 'tree_swallow'], "Test Set Confusion Matrix for SVM")
+    plt.savefig('svm_conf.png')
     # plt.plot(nums, [x*100 for x in train_errors], 'r', label="training")
     # plt.plot(nums, [x*100 for x in val_errors], 'b', label="validation")
     # plt.axis([0, 500, 0, 100])
