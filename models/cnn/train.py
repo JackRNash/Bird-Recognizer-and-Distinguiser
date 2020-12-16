@@ -19,7 +19,7 @@ np.random.seed(4701)
 data_dir = '../../dataset/'
 net_dir = './lenet5.pth'
 batch_size = 8
-num_epochs = 1
+num_epochs = 5
 
 
 class Net(nn.Module):
@@ -33,11 +33,11 @@ class Net(nn.Module):
 
     def __init__(self):
         super(Net, self).__init__()
-        self.conv1 = nn.Conv2d(3, 6, 5)
+        self.conv1 = nn.Conv2d(3, 18, 5)
         self.pool1 = nn.MaxPool2d(2, 2)
-        self.conv2 = nn.Conv2d(6, 16, 5)
+        self.conv2 = nn.Conv2d(18, 54, 5)
         self.pool2 = nn.MaxPool2d(2, 2)
-        self.fc1 = nn.Linear(61 * 61 * 16, 120)
+        self.fc1 = nn.Linear(61 * 61 * 54, 120)
         self.fc2 = nn.Linear(120, 84)
         self.fc3 = nn.Linear(84, 10)
 
@@ -50,7 +50,7 @@ class Net(nn.Module):
         """
         val = self.pool1(Activation.relu(self.conv1(val)))
         val = self.pool2(Activation.relu(self.conv2(val)))
-        val = val.view(-1, 61 * 61 * 16)
+        val = val.view(-1, 61 * 61 * 54)
         val = Activation.relu(self.fc1(val))
         val = Activation.relu(self.fc2(val))
         val = self.fc3(val)
@@ -163,6 +163,8 @@ def train_model(dataloader, opt, val_dataloader):
             total_val += labels.nelement()
             correct_val += predicted.eq(labels.data).sum().item()
             val_accuracy = 100 * correct_val / total_val
+        print(train_accuracy)
+        print(val_accuracy)
         print('Epoch {}, train Loss: {:.3f}'.format(epoch, loss.item()),
               "Training Accuracy: %d %%" % (train_accuracy), 'Epoch {}, val Loss: {:.3f}'.format(epoch, loss_val.item()), "Val Accuracy: %d %%" % (val_accuracy))
 
@@ -192,27 +194,47 @@ def test_model(net, dataloader):
             for i in range(len(predicted)):
                 if predicted[i] == labels[i]:
                     correct += 1
-
+    print(100 * correct / total)
     print('Accuracy of the network on the ' + str(total) +
           ' test images: %d %%' % (100 * correct / total))
 
 
-def plot_confusion_matrix(true, preds, classes):
+def plot_confusion_matrix(true, preds, classes, title):
+    """
+    Plots a confusion matrix based on predictions vs actual results.
+
+    Creates a confusion matrix for all [classes] and saves it to plt.
+
+    Parameter true: correct classifications
+    Precondition: a list of integer classifications
+
+    Parameter preds: predicted classifications
+    Precondition: a list of integer classifications
+
+    Parameter classes: all possible predictions
+    Precondition: a list of strings
+
+    Parameter title: title for the graph
+    Precondition: a string
+    """
     cmatrix = confusion_matrix(true, preds)
     threshold = np.min(np.diagonal(cmatrix))
     fig, ax = plt.subplots()
     ax.set(xticks=np.arange(cmatrix.shape[1]),
            yticks=np.arange(cmatrix.shape[0]),
            xticklabels=classes,
-           yticklabels=classes,
-           ylabel='True label',
-           xlabel='Predicted label')
+           yticklabels=classes)
+    ax.set_ylabel('True label', fontsize=22)
+    ax.set_xlabel('Predicted label', fontsize=22)
+    ax.set_title(title, fontsize=22)
     ax.tick_params(axis='x', labelrotation=90)
     for i in range(cmatrix.shape[0]):
         for j in range(cmatrix.shape[1]):
             if cmatrix[i, j] > 0:
                 ax.text(j, i, cmatrix[i, j], ha='center', va='center',
-                        color='white' if cmatrix[i, j] < threshold else 'black')
+                        size=22, color='white' if cmatrix[i, j] < threshold else 'black')
+    for label in (ax.get_xticklabels() + ax.get_yticklabels()):
+        label.set_fontsize(15)
     fig.set_size_inches(18.5, 10.5)
     fig.tight_layout()
     ax.imshow(cmatrix)
@@ -239,12 +261,12 @@ if __name__ == '__main__':
 
     # Create training and validation datasets
     image_datasets = {x: datasets.ImageFolder(os.path.join(data_dir,
-                                                           x if x == 'train' else 'validation'), data_transform)
-                      for x in ['train', 'val']}
+                                                           x if x != 'val' else 'validation'), data_transform)
+                      for x in ['train', 'val', 'test']}
     # Create training and validation dataloaders
     dataloaders_dict = {x: torch.utils.data.DataLoader(image_datasets[x],
                                                        batch_size=batch_size, shuffle=True, num_workers=0)
-                        for x in ['train', 'val']}
+                        for x in ['train', 'val', 'test']}
 
     # Create model
     net = Net()
@@ -252,12 +274,17 @@ if __name__ == '__main__':
     # Create loss function & establish optimizer
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
+    start_time = time.time()
     train_model(dataloaders_dict['train'], optimizer, dataloaders_dict['val'])
+    print("Time taken: ")
+    print("--- %s seconds ---" % (time.time() - start_time))
     epochs = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-    t_a = [18, 33, 41, 48, 57, 67, 78, 88, 91, 94]
-    v_a = [29, 37, 38, 44, 46, 45, 49, 48, 49, 45]
-    t_l = [1.943, 1.816, 1.143, 1.927, 1.030, 1.103, .791, .161, .545, .320]
-    v_l = [3.055, .919, 2.345, 4.132, .222, .486, 6.959, .159, .016, .010]
+    t_a = [25.35, 37.86, 52.28, 60.49, 73.26,
+           85.54, 92.59, 96.21, 99.06, 96.25]
+    v_a = [32.64, 42.62, 45.95, 44.28, 50.73,
+           50.10, 49.90, 48.86, 51.77, 50.52]
+    t_l = [1.688, 1.328, 1.694, 0.716, 1.103, .474, .162, .089, .003, 1.129]
+    v_l = [1.876, 1.129, 0.876, 1.142, .336, .173, .785, 3.857, .004, .019]
     """ Remove this store/load functionality eventually """
     # Store model
     torch.save(net.state_dict(), net_dir)
@@ -268,6 +295,9 @@ if __name__ == '__main__':
 
     test_model(net, dataloaders_dict['val'])
 
+    print("Testing: ")
+    test_model(net, dataloaders_dict['test'])
+
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     net = net.to(device)
 
@@ -275,19 +305,19 @@ if __name__ == '__main__':
                                                                dataloaders_dict['val'], device)
     train_preds_full, train_true_full = get_labels_and_predictions(net,
                                                                    dataloaders_dict['train'], device)
-    # plot_confusion_matrix(val_true_full, val_preds_full,
-    #                       image_datasets['val'].classes)
-    # plt.savefig('first_conf.png')
+    plot_confusion_matrix(val_true_full, val_preds_full,
+                          image_datasets['val'].classes, "Validation Confusion Matrix for CNN")
+    plt.savefig('first_conf.png')
     # plot_confusion_matrix(train_true_full, train_preds_full,
     #                       image_datasets['train'].classes)
     # plt.savefig('second_conf.png')
-    plt.clf()
-    plt.plot(epochs, [(100-x) for x in t_a], 'r', label="training")
-    plt.plot(epochs, [(100-x) for x in v_a], 'b', label="validation")
-    plt.axis([1, 10, 0, 100])
-    plt.xlabel("Number of Epochs", fontsize=12)
-    plt.ylabel("Error", fontsize=12)
-    plt.title("Train vs Validation Error", fontsize=15)
-    plt.legend(loc="upper right")
-    plt.savefig('cnn_acc.png')
-    plt.clf()
+    # plt.clf()
+    # plt.plot(epochs, [(100-x) for x in t_a], 'r', label="training")
+    # plt.plot(epochs, [(100-x) for x in v_a], 'b', label="validation")
+    # plt.axis([1, 10, 0, 100])
+    # plt.xlabel("Number of Epochs", fontsize=12)
+    # plt.ylabel("Error", fontsize=12)
+    # plt.title("Train vs Validation Error", fontsize=15)
+    # plt.legend(loc="upper right")
+    # plt.savefig('cnn_acc.png')
+    # plt.clf()
