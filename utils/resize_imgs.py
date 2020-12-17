@@ -9,7 +9,8 @@ bird_dirs = [x for x in os.listdir(path) if os.path.isdir(path+x)]
 # print(bird_dirs)
 extensions = {}
 
-
+# Code adapted from
+# https://stackoverflow.com/questions/273946/how-do-i-resize-an-image-using-pil-and-maintain-its-aspect-ratio
 def resize_img():
     for bird in bird_dirs:
         print(bird + '...')
