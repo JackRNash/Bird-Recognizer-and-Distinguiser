@@ -2,6 +2,8 @@ import sys
 import os
 import hashlib
 
+# CITATION: https://stackoverflow.com/questions/748675/finding-duplicate-files-and-removing-them
+
 
 def chunk_reader(fobj, chunk_size=1024):
     """Generator that reads a file in chunks of bytes"""
